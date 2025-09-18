@@ -1,0 +1,40 @@
+export const bankData = {
+  "generated_at": "2025-09-18",
+  "source_notes": [
+    "فهرست‌ها و منابع عمومی (ویکی‌پدیا فارسی، وب‌سایت بانک مرکزی ایران، Iran Data Portal و منابع خبری/مجموعه‌فهرست‌ها) برای تعیین نام بانک‌ها مورد استفاده قرار گرفت."
+  ],
+  "banks": [
+    { "name_fa": "بانک مرکزی جمهوری اسلامی ایران", "name_en": "Central Bank of Iran", "color": "#1F77B4" },
+    { "name_fa": "بانک ملی ایران", "name_en": "Bank Melli Iran", "color": "#FF7F0E" },
+    { "name_fa": "بانک سپه", "name_en": "Bank Sepah", "color": "#2CA02C" },
+    { "name_fa": "بانک کشاورزی", "name_en": "Agriculture Bank of Iran (Bank Keshavarzi)", "color": "#D62728" },
+    { "name_fa": "بانک مسکن", "name_en": "Bank Maskan", "color": "#9467BD" },
+    { "name_fa": "بانک صنعت و معدن", "name_en": "Bank of Industry and Mine", "color": "#8C564B" },
+    { "name_fa": "بانک توسعه صادرات ایران", "name_en": "Export Development Bank of Iran", "color": "#E377C2" },
+    { "name_fa": "پست‌بانک ایران", "name_en": "Post Bank of Iran", "color": "#7F7F7F" },
+    { "name_fa": "بانک تجارت", "name_en": "Bank Tejarat", "color": "#BCBD22" },
+    { "name_fa": "بانک ملت", "name_en": "Bank Mellat", "color": "#17BECF" },
+    { "name_fa": "بانک صادرات ایران", "name_en": "Bank Saderat Iran", "color": "#393B79" },
+    { "name_fa": "بانک ملی توسعه تعاون", "name_en": "Tose'e Ta'avon Bank (Cooperative Development Bank)", "color": "#637939" },
+    { "name_fa": "بانک رفاه کارگران", "name_en": "Refah Bank", "color": "#8CA252" },
+    { "name_fa": "بانک توسعه تعاون", "name_en": "Bank-e Tose'e Ta'avon (Development/Cooperative Bank)", "color": "#BD9E39" },
+    { "name_fa": "بانک پارسیان", "name_en": "Parsian Bank", "color": "#4C72B0" },
+    { "name_fa": "بانک پاسارگاد", "name_en": "Bank Pasargad", "color": "#DD8452" },
+    { "name_fa": "بانک سامان", "name_en": "Bank Saman", "color": "#55A868" },
+    { "name_fa": "بانک سینا", "name_en": "Bank Sina", "color": "#C44E52" },
+    { "name_fa": "بانک سرمایه", "name_en": "Bank Sarmayeh", "color": "#8172B3" },
+    { "name_fa": "بانک شهر", "name_en": "Bank Shahr (City Bank)", "color": "#937860" },
+    { "name_fa": "بانک دی", "name_en": "Bank Dey", "color": "#DA8BC3" },
+    { "name_fa": "بانک اقتصاد نوین", "name_en": "Bank Eqtesad Novin (EN Bank)", "color": "#8C8C8C" },
+    { "name_fa": "بانک کارآفرین", "name_en": "Bank Karafarin", "color": "#7B4173" },
+    { "name_fa": "بانک گردشگری", "name_en": "Tourism Bank", "color": "#A55194" },
+    { "name_fa": "بانک قوامین", "name_en": "Bank Ghavamin", "color": "#CEB974" },
+    { "name_fa": "بانک انصار", "name_en": "Ansar Bank", "color": "#B07AA1" },
+    { "name_fa": "بانک ایران‌زمین", "name_en": "Bank Iran Zamin", "color": "#6A9ECF" },
+    { "name_fa": "بانک آینده", "name_en": "Ayandeh Bank (Bank Ayandeh)", "color": "#FF9F9B" },
+    { "name_fa": "بانک قرض‌الحسنه رسالت", "name_en": "Qarzol-Hasaneh Resalat Bank", "color": "#66C2A5" },
+    { "name_fa": "بانک قرض‌الحسنه مهر ایران", "name_en": "Gharzolhasaneh Mehr Iran Bank", "color": "#FCB078" },
+    { "name_fa": "بانک حکمت ایرانیان", "name_en": "Hekmat Iranian Bank", "color": "#A6D854" },
+    { "name_fa": "بانک صادرات ملی/خصوصی", "name_en": "—", "color": "#B2ABD2" }
+  ]
+}
