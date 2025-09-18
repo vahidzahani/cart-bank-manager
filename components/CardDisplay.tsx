@@ -1,6 +1,6 @@
 import React from 'react';
 import type { BankCard } from '../types';
-import { EditIcon, TrashIcon } from './icons';
+import { EditIcon, TrashIcon, ChipIcon } from './icons';
 import CopyToClipboardButton from './CopyToClipboardButton';
 
 interface CardDisplayProps {
@@ -13,52 +13,95 @@ const formatCardNumber = (num: string) => {
   return num.replace(/\s/g, '').replace(/(\d{4})/g, '$1 ').trim();
 };
 
-const InfoRow: React.FC<{ label: string; value: string; isLtr?: boolean }> = ({ label, value, isLtr = false }) => (
-  <div className="flex items-center justify-between py-2 border-b border-blue-100 last:border-b-0">
-    <span className="text-sm text-blue-800">{label}</span>
-    <div className="flex items-center gap-2">
-      <span className={`font-mono text-sm font-semibold text-blue-900 ${isLtr ? 'tracking-wider' : ''}`} dir={isLtr ? 'ltr' : 'rtl'}>
-        {value}
-      </span>
-      <CopyToClipboardButton textToCopy={value} />
-    </div>
-  </div>
-);
-
 const CardDisplay: React.FC<CardDisplayProps> = ({ card, onEdit, onDelete }) => {
-  const displayColor = card.customColor || card.bankColor;
-  const headerStyle = displayColor ? { backgroundColor: displayColor } : {};
-  const headerClasses = displayColor ? '' : 'bg-gradient-to-br from-blue-600 to-blue-800';
+  const displayColor = card.customColor || card.bankColor || '#2563eb'; // A nice default blue
+
+  // Helper to create a slightly darker color for the gradient effect
+  const hexToRgb = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
+  };
+
+  const darkenColor = (rgb: { r: number, g: number, b: number } | null, percent: number) => {
+    if (!rgb) return '#000000';
+    const amount = 1 - percent / 100;
+    const r = Math.round(rgb.r * amount);
+    const g = Math.round(rgb.g * amount);
+    const b = Math.round(rgb.b * amount);
+    return `rgb(${r}, ${g}, ${b})`;
+  };
+
+  const gradientEndColor = darkenColor(hexToRgb(displayColor), 20);
+
+  const cardStyle = {
+    background: `linear-gradient(135deg, ${displayColor} 0%, ${gradientEndColor} 100%)`,
+  };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden transform hover:scale-105 transition-transform duration-300">
-      <div className={`p-5 text-white flex justify-between items-start ${headerClasses}`} style={headerStyle}>
-        <div>
+    <div className="bg-white rounded-xl shadow-lg overflow-hidden animate-fade-in-up">
+      {/* Visual Card Part */}
+      <div 
+        className="relative p-5 flex flex-col justify-between aspect-[1.586/1] text-white" 
+        style={cardStyle}
+      >
+        {/* Top Row: Bank Name & Chip */}
+        <div className="flex justify-between items-start">
+          <div>
             <h3 className="text-xl font-bold">{card.customTitle || card.bankName}</h3>
-            {card.customTitle && <p className="text-base text-white/90 mt-1">{card.bankName}</p>}
-            {card.bankNameEn && <p className="text-sm text-white/80 font-playfair-display mt-1">{card.bankNameEn}</p>}
+            {card.customTitle && <p className="text-sm text-white/90 mt-1">{card.bankName}</p>}
+          </div>
+          <ChipIcon className="w-12 h-auto" />
         </div>
-         <div className="w-12 h-8 bg-black/20 rounded-md flex items-center justify-center flex-shrink-0">
-            <div className="w-10 h-6 bg-yellow-400 rounded-sm"></div>
+
+        {/* Middle: Card Number */}
+        <div className="py-2 flex items-center justify-center gap-2">
+          <span className="font-mono text-2xl tracking-widest" dir="ltr">
+            {formatCardNumber(card.cardNumber)}
+          </span>
+          <CopyToClipboardButton textToCopy={card.cardNumber.replace(/\s/g, '')} variant="dark" />
+        </div>
+
+        {/* Bottom Row: Expiry, CVV & Bank EN Name */}
+        <div className="flex justify-between items-end text-sm">
+          <div className="flex items-center gap-6 font-mono" dir="ltr">
+             <div>
+                <p className="text-xs uppercase text-white/70">CVV2</p>
+                <p>{card.cvv}</p>
+             </div>
+             <div>
+                <p className="text-xs uppercase text-white/70">Expires</p>
+                <p>{card.expiryDate}</p>
+             </div>
+          </div>
+          <p className="font-playfair-display text-lg italic">{card.bankNameEn}</p>
         </div>
       </div>
-      <div className="p-5 space-y-2">
-        <InfoRow label="شماره کارت" value={formatCardNumber(card.cardNumber)} isLtr />
-        <InfoRow label="شماره شبا" value={card.iban} isLtr />
-        <div className="flex justify-between pt-2">
-            <InfoRow label="CVV2" value={card.cvv} isLtr />
-            <InfoRow label="انقضا" value={card.expiryDate} isLtr />
+
+      {/* Info & Actions Part */}
+      <div className="p-4 space-y-3">
+         <div className="flex items-center justify-between">
+            <span className="text-sm text-gray-500">شماره شبا (IBAN)</span>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-sm font-semibold text-gray-800 tracking-wider" dir="ltr">
+                {card.iban}
+              </span>
+              <CopyToClipboardButton textToCopy={card.iban} />
+            </div>
         </div>
-      </div>
-       <div className="p-3 bg-blue-50 flex justify-end items-center gap-2">
-        <button onClick={() => onEdit(card)} className="flex items-center gap-1 px-3 py-1 text-sm text-blue-700 bg-blue-200 rounded-md hover:bg-blue-300 transition-colors">
-          <EditIcon className="w-4 h-4" />
-          ویرایش
-        </button>
-        <button onClick={() => onDelete(card.id)} className="flex items-center gap-1 px-3 py-1 text-sm text-red-700 bg-red-200 rounded-md hover:bg-red-300 transition-colors">
-          <TrashIcon className="w-4 h-4" />
-          حذف
-        </button>
+        <div className="pt-3 mt-2 border-t border-gray-100 flex justify-end items-center gap-2">
+            <button onClick={() => onEdit(card)} className="flex items-center gap-1 px-3 py-1 text-sm text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors">
+                <EditIcon className="w-4 h-4" />
+                ویرایش
+            </button>
+            <button onClick={() => onDelete(card.id)} className="flex items-center gap-1 px-3 py-1 text-sm text-red-700 bg-red-100 rounded-md hover:bg-red-200 transition-colors">
+                <TrashIcon className="w-4 h-4" />
+                حذف
+            </button>
+        </div>
       </div>
     </div>
   );

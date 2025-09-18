@@ -1,12 +1,12 @@
-
 import React, { useState } from 'react';
 import { CopyIcon, CheckIcon } from './icons';
 
 interface CopyToClipboardButtonProps {
   textToCopy: string;
+  variant?: 'light' | 'dark';
 }
 
-const CopyToClipboardButton: React.FC<CopyToClipboardButtonProps> = ({ textToCopy }) => {
+const CopyToClipboardButton: React.FC<CopyToClipboardButtonProps> = ({ textToCopy, variant = 'light' }) => {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = async () => {
@@ -19,12 +19,17 @@ const CopyToClipboardButton: React.FC<CopyToClipboardButtonProps> = ({ textToCop
     }
   };
 
+  const baseClasses = 'transition-all duration-200 ease-in-out p-1 rounded-md';
+  const lightVariantClasses = 'text-gray-400 hover:text-blue-600 hover:bg-blue-100';
+  const darkVariantClasses = 'text-white/70 hover:text-white hover:bg-white/20';
+  const copiedClasses = variant === 'light' 
+    ? 'text-green-500 bg-green-100' 
+    : 'text-green-300 bg-green-900/50';
+
   return (
     <button
       onClick={handleCopy}
-      className={`transition-all duration-200 ease-in-out p-1 rounded-md ${
-        copied ? 'text-green-500 bg-green-100' : 'text-gray-400 hover:text-blue-600 hover:bg-blue-100'
-      }`}
+      className={`${baseClasses} ${copied ? copiedClasses : (variant === 'light' ? lightVariantClasses : darkVariantClasses)}`}
       aria-label="کپی"
     >
       {copied ? <CheckIcon className="w-5 h-5" /> : <CopyIcon className="w-5 h-5" />}
