@@ -1,22 +1,24 @@
 import React from 'react';
 import type { BankCard } from '../types';
-import { EditIcon, TrashIcon, ChipIcon } from './icons';
+import { EditIcon, TrashIcon, ChipIcon, ShareIcon } from './icons';
 import CopyToClipboardButton from './CopyToClipboardButton';
 
 interface CardDisplayProps {
   card: BankCard;
   onEdit: (card: BankCard) => void;
   onDelete: (id: string) => void;
+  onShare: (card: BankCard) => void;
+  isExpanded: boolean;
+  onToggleExpand: (id: string) => void;
 }
 
 const formatCardNumber = (num: string) => {
   return num.replace(/\s/g, '').replace(/(\d{4})/g, '$1 ').trim();
 };
 
-const CardDisplay: React.FC<CardDisplayProps> = ({ card, onEdit, onDelete }) => {
-  const displayColor = card.customColor || card.bankColor || '#2563eb'; // A nice default blue
+const CardDisplay: React.FC<CardDisplayProps> = ({ card, onEdit, onDelete, onShare, isExpanded, onToggleExpand }) => {
+  const displayColor = card.customColor || card.bankColor || '#2563eb';
 
-  // Helper to create a slightly darker color for the gradient effect
   const hexToRgb = (hex: string) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? {
@@ -45,10 +47,14 @@ const CardDisplay: React.FC<CardDisplayProps> = ({ card, onEdit, onDelete }) => 
     <div className="bg-white rounded-xl shadow-lg overflow-hidden animate-fade-in-up">
       {/* Visual Card Part */}
       <div 
-        className="relative p-5 flex flex-col justify-between aspect-[1.586/1] text-white" 
+        className="relative p-5 flex flex-col justify-between aspect-[1.586/1] text-white md:cursor-auto cursor-pointer" 
         style={cardStyle}
+        onClick={() => onToggleExpand(card.id)}
+        role="button"
+        aria-expanded={isExpanded}
+        tabIndex={0}
       >
-        {/* Top Row: Bank Name & Chip */}
+        {/* Top Row: Bank Name & Logo/Chip */}
         <div className="flex justify-between items-start">
           <div>
             <h3 className="text-xl font-bold">{card.customTitle || card.bankName}</h3>
@@ -65,8 +71,10 @@ const CardDisplay: React.FC<CardDisplayProps> = ({ card, onEdit, onDelete }) => 
           <CopyToClipboardButton textToCopy={card.cardNumber.replace(/\s/g, '')} variant="dark" />
         </div>
 
-        {/* Bottom Row: Expiry, CVV & Bank EN Name */}
-        <div className="flex justify-between items-end text-sm">
+        {/* Bottom Row: Expiry, CVV */}
+        <div className={`flex items-end text-sm transition-all duration-300
+          md:visible md:opacity-100 md:h-auto
+          ${isExpanded ? 'visible opacity-100 h-auto' : 'invisible opacity-0 h-0'}`}>
           <div className="flex items-center gap-6 font-mono" dir="ltr">
              <div>
                 <p className="text-xs uppercase text-white/70">CVV2</p>
@@ -77,30 +85,39 @@ const CardDisplay: React.FC<CardDisplayProps> = ({ card, onEdit, onDelete }) => 
                 <p>{card.expiryDate}</p>
              </div>
           </div>
-          <p className="font-playfair-display text-lg italic">{card.bankNameEn}</p>
         </div>
       </div>
 
       {/* Info & Actions Part */}
-      <div className="p-4 space-y-3">
-         <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-500">شماره شبا (IBAN)</span>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-sm font-semibold text-gray-800 tracking-wider" dir="ltr">
-                {card.iban}
-              </span>
-              <CopyToClipboardButton textToCopy={card.iban} />
+      <div className={`transition-all duration-300 ease-in-out grid 
+        md:grid-rows-[1fr]
+        ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+        <div className="overflow-hidden">
+          <div className="p-4 space-y-3">
+            <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">شماره شبا (IBAN)</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-sm font-semibold text-gray-800 tracking-wider" dir="ltr">
+                    {card.iban}
+                  </span>
+                  <CopyToClipboardButton textToCopy={card.iban} />
+                </div>
             </div>
-        </div>
-        <div className="pt-3 mt-2 border-t border-gray-100 flex justify-end items-center gap-2">
-            <button onClick={() => onEdit(card)} className="flex items-center gap-1 px-3 py-1 text-sm text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors">
-                <EditIcon className="w-4 h-4" />
-                ویرایش
-            </button>
-            <button onClick={() => onDelete(card.id)} className="flex items-center gap-1 px-3 py-1 text-sm text-red-700 bg-red-100 rounded-md hover:bg-red-200 transition-colors">
-                <TrashIcon className="w-4 h-4" />
-                حذف
-            </button>
+            <div className="pt-3 mt-2 border-t border-gray-100 flex justify-end items-center gap-2">
+                <button onClick={(e) => { e.stopPropagation(); onShare(card); }} className="flex items-center gap-1 px-3 py-1 text-sm text-green-700 bg-green-100 rounded-md hover:bg-green-200 transition-colors">
+                    <ShareIcon className="w-4 h-4" />
+                    اشتراک
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); onEdit(card); }} className="flex items-center gap-1 px-3 py-1 text-sm text-blue-700 bg-blue-100 rounded-md hover:bg-blue-200 transition-colors">
+                    <EditIcon className="w-4 h-4" />
+                    ویرایش
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); onDelete(card.id); }} className="flex items-center gap-1 px-3 py-1 text-sm text-red-700 bg-red-100 rounded-md hover:bg-red-200 transition-colors">
+                    <TrashIcon className="w-4 h-4" />
+                    حذف
+                </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

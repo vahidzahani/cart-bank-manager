@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { BankCard } from '../types';
 import { CloseIcon } from './icons';
 import { bankData } from '../data/banks';
@@ -27,6 +27,9 @@ const initialState: Omit<BankCard, 'id'> = {
 
 const CardFormModal: React.FC<CardFormModalProps> = ({ isOpen, onClose, onSave, cardToEdit }) => {
   const [card, setCard] = useState<Omit<BankCard, 'id'>>(initialState);
+  const [isBankSelectorOpen, setIsBankSelectorOpen] = useState(false);
+  const [bankSearchTerm, setBankSearchTerm] = useState('');
+  const bankSelectorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -35,8 +38,25 @@ const CardFormModal: React.FC<CardFormModalProps> = ({ isOpen, onClose, onSave, 
         } else {
             setCard(initialState);
         }
+    } else {
+      setIsBankSelectorOpen(false);
+      setBankSearchTerm('');
     }
   }, [cardToEdit, isOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (bankSelectorRef.current && !bankSelectorRef.current.contains(event.target as Node)) {
+        setIsBankSelectorOpen(false);
+      }
+    };
+    if (isBankSelectorOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isBankSelectorOpen]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -73,6 +93,10 @@ const CardFormModal: React.FC<CardFormModalProps> = ({ isOpen, onClose, onSave, 
       id: cardToEdit ? cardToEdit.id : new Date().toISOString(),
     });
   };
+  
+  const filteredBanks = bankData.banks.filter(bank =>
+    bank.name_fa.toLowerCase().includes(bankSearchTerm.toLowerCase())
+  );
 
   if (!isOpen) return null;
 
@@ -86,15 +110,63 @@ const CardFormModal: React.FC<CardFormModalProps> = ({ isOpen, onClose, onSave, 
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div>
+          <div className="relative" ref={bankSelectorRef}>
             <label htmlFor="bankName" className="block text-sm font-medium text-gray-700">نام بانک <span className="text-red-500">*</span></label>
-            <select name="bankName" id="bankName" value={card.bankName} onChange={handleChange} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
-                <option value="" disabled>یک بانک را انتخاب کنید</option>
-                {bankData.banks.map(bank => (
-                    <option key={bank.name_fa} value={bank.name_fa}>{bank.name_fa}</option>
-                ))}
-            </select>
-          </div>
+            <button
+                type="button"
+                onClick={() => setIsBankSelectorOpen(!isBankSelectorOpen)}
+                className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-right flex items-center justify-between"
+                aria-haspopup="listbox"
+                aria-expanded={isBankSelectorOpen}
+            >
+                {card.bankName ? (
+                    <div className="flex items-center gap-2">
+                        <div className="w-8 h-5 bg-gray-200 rounded-sm flex items-center justify-center">
+                            <svg className="w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                        </div>
+                        <span>{card.bankName}</span>
+                    </div>
+                ) : (
+                    <span className="text-gray-500">یک بانک را انتخاب کنید</span>
+                )}
+                <svg className={`w-5 h-5 text-gray-400 transition-transform ${isBankSelectorOpen ? 'transform rotate-180' : ''}`} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+            </button>
+            {isBankSelectorOpen && (
+                <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm" role="listbox">
+                    <div className="p-2 sticky top-0 bg-white z-10">
+                        <input
+                            type="text"
+                            placeholder="جستجوی بانک..."
+                            value={bankSearchTerm}
+                            onChange={(e) => setBankSearchTerm(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                    </div>
+                    <ul className="py-1">
+                        {filteredBanks.length > 0 ? filteredBanks.map(bank => (
+                            <li key={bank.name_fa} role="option" aria-selected={card.bankName === bank.name_fa}>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setCard({ ...card, bankName: bank.name_fa });
+                                        setIsBankSelectorOpen(false);
+                                        setBankSearchTerm('');
+                                    }}
+                                    className="w-full text-right text-gray-900 cursor-pointer select-none py-2 px-4 hover:bg-blue-100 flex items-center gap-3"
+                                >
+                                   <div className="w-10 h-6 bg-gray-100 border border-gray-200 rounded flex items-center justify-center">
+                                       <svg className="w-4 h-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                                   </div>
+                                    <span className="flex-1">{bank.name_fa}</span>
+                                </button>
+                            </li>
+                        )) : (
+                            <li className="text-center text-gray-500 py-2 px-4">بانکی یافت نشد.</li>
+                        )}
+                    </ul>
+                </div>
+            )}
+        </div>
            <div>
             <label htmlFor="customTitle" className="block text-sm font-medium text-gray-700">عنوان دلخواه (اختیاری)</label>
             <input type="text" name="customTitle" id="customTitle" value={card.customTitle || ''} onChange={handleChange} className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" placeholder="مثال: کارت حقوق" />
