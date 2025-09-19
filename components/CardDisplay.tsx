@@ -64,8 +64,8 @@ const CardDisplay: React.FC<CardDisplayProps> = ({ card, onEdit, onDelete, onSha
         </div>
 
         {/* Middle: Card Number */}
-        <div className="py-2 flex items-center justify-center gap-2">
-          <span className="font-mono text-2xl tracking-widest" dir="ltr">
+        <div className="py-1 flex items-center justify-center gap-2">
+          <span className="font-mono text-xl tracking-widest" dir="ltr">
             {formatCardNumber(card.cardNumber)}
           </span>
           <CopyToClipboardButton textToCopy={card.cardNumber.replace(/\s/g, '')} variant="dark" />
@@ -97,7 +97,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({ card, onEdit, onDelete, onSha
             <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-500">شماره شبا (IBAN)</span>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm font-semibold text-gray-800 tracking-wider" dir="ltr">
+                  <span className="font-mono text-xs font-semibold text-gray-800 tracking-wider" dir="ltr">
                     {card.iban}
                   </span>
                   <CopyToClipboardButton textToCopy={card.iban} />
