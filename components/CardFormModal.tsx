@@ -16,6 +16,7 @@ const PRESET_COLORS = [
   '#06b6d4', '#3b82f6', '#8b5cf6', '#d946ef', '#ec4899', '#78716c'
 ];
 
+// FIX: Added 'status' property to satisfy the Omit<BankCard, 'id'> type.
 const initialState: Omit<BankCard, 'id'> = {
   bankName: '',
   customTitle: '',
@@ -24,6 +25,7 @@ const initialState: Omit<BankCard, 'id'> = {
   cvv: '',
   expiryDate: '',
   customColor: undefined,
+  status: 'local',
 };
 
 const CardFormModal: React.FC<CardFormModalProps> = ({ isOpen, onClose, onSave, cardToEdit }) => {
@@ -83,7 +85,7 @@ const CardFormModal: React.FC<CardFormModalProps> = ({ isOpen, onClose, onSave, 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const requiredFields: (keyof Omit<BankCard, 'id' | 'customTitle' | 'customColor' | 'bankColor' | 'bankNameEn'>)[] = ['bankName', 'cardNumber', 'iban', 'cvv', 'expiryDate'];
+    const requiredFields: (keyof Omit<BankCard, 'id' | 'customTitle' | 'customColor' | 'bankColor' | 'bankNameEn' | 'status'>)[] = ['bankName', 'cardNumber', 'iban', 'cvv', 'expiryDate'];
     for(const field of requiredFields) {
         if(!card[field]) {
             addToast('لطفا همه فیلدهای ستاره‌دار را پر کنید.', 'error');

@@ -9,4 +9,5 @@ export interface BankCard {
   bankNameEn?: string;
   customColor?: string;
   customTitle?: string;
+  status: 'synced' | 'local' | 'edited';
 }

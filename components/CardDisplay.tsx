@@ -1,6 +1,6 @@
 import React from 'react';
 import type { BankCard } from '../types';
-import { EditIcon, TrashIcon, ChipIcon, ShareIcon } from './icons';
+import { EditIcon, TrashIcon, ChipIcon, ShareIcon, CloudIcon, AppDownloadIcon } from './icons';
 import CopyToClipboardButton from './CopyToClipboardButton';
 
 interface CardDisplayProps {
@@ -42,6 +42,20 @@ const CardDisplay: React.FC<CardDisplayProps> = ({ card, onEdit, onDelete, onSha
   const cardStyle = {
     background: `linear-gradient(135deg, ${displayColor} 0%, ${gradientEndColor} 100%)`,
   };
+  
+  const StatusIcon = () => {
+    const iconProps = { className: "w-5 h-5 text-white/60" };
+    switch (card.status) {
+        case 'synced':
+            return <div title="ذخیره شده در سرور" className="absolute top-3 left-3"><CloudIcon {...iconProps} /></div>;
+        case 'local':
+            return <div title="ذخیره شده روی دستگاه" className="absolute top-3 left-3"><AppDownloadIcon {...iconProps} /></div>;
+        case 'edited':
+            return <div title="ویرایش شده، ذخیره نشده" className="absolute top-3 left-3"><EditIcon {...iconProps} /></div>;
+        default:
+            return null;
+    }
+  };
 
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden animate-fade-in-up">
@@ -54,6 +68,7 @@ const CardDisplay: React.FC<CardDisplayProps> = ({ card, onEdit, onDelete, onSha
         aria-expanded={isExpanded}
         tabIndex={0}
       >
+        <StatusIcon />
         {/* Top Row: Bank Name & Logo/Chip */}
         <div className="flex justify-between items-start">
           <div>

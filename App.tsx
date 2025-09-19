@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import useLocalStorage from './hooks/useLocalStorage';
 import type { BankCard } from './types';
 import CardDisplay from './components/CardDisplay';
@@ -19,7 +19,7 @@ const DATA_API_URL = 'https://card.cloudecode.ir/data.php';
 
 const App: React.FC = () => {
   const [token, setToken] = useLocalStorage<string | null>('authToken', null);
-  const [cards, setCards] = useState<BankCard[]>([]);
+  const [cards, setCards] = useLocalStorage<BankCard[]>('bankCards', []);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [cardToEdit, setCardToEdit] = useState<BankCard | null>(null);
@@ -31,19 +31,49 @@ const App: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState<'main' | 'help' | 'support' | 'download'>('main');
   const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   
   const { addToast } = useToast();
   
+  const isHandlingPopstate = useRef(false);
+
   // Auto-load cards when user logs in (token is set)
   useEffect(() => {
     if (token) {
       handleLoadCardsFromServer(true); // silent load on startup
+    } else {
+      setCards([]); // Clear cards on logout
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  // Back button navigation handler
+  useEffect(() => {
+    const popstateHandler = () => {
+        isHandlingPopstate.current = true;
+
+        if(isLogoutConfirmOpen) {
+            setIsLogoutConfirmOpen(false);
+        } else if(isMenuOpen) {
+            setIsMenuOpen(false);
+        } else if (isModalOpen) {
+            handleCloseModal();
+        } else if (isConfirmModalOpen) {
+            handleCloseConfirmModal();
+        } else if (isChangePasswordModalOpen) {
+            setIsChangePasswordModalOpen(false);
+        } else if (currentPage !== 'main') {
+            handleNavigate('main');
+        }
+
+        setTimeout(() => { isHandlingPopstate.current = false; }, 0);
+    };
+    window.addEventListener('popstate', popstateHandler);
+    return () => window.removeEventListener('popstate', popstateHandler);
+  }, [isMenuOpen, isModalOpen, isConfirmModalOpen, isChangePasswordModalOpen, currentPage, isLogoutConfirmOpen]);
   
   const handleApiRequest = async (url: string, options: RequestInit, errorMessage: string) => {
     setLoading(true);
@@ -91,12 +121,42 @@ const App: React.FC = () => {
        setAuthError((error as Error).message);
     }
   };
+  
+  const proceedToLogout = () => {
+    setToken(null);
+    // setCards is handled by useEffect on token change
+    setCurrentPage('main');
+    setIsLogoutConfirmOpen(false);
+  };
 
   const handleLogout = () => {
-    setToken(null);
-    setCards([]);
-    setCurrentPage('main');
+    const hasUnsavedChanges = cards.some(c => c.status !== 'synced');
+    if (hasUnsavedChanges) {
+        window.history.pushState({ modal: 'logoutConfirm' }, '');
+        setIsLogoutConfirmOpen(true);
+    } else {
+        proceedToLogout();
+    }
   };
+  
+  const handleLogoutAnyway = () => {
+    if(isHandlingPopstate.current) {
+        setIsLogoutConfirmOpen(false);
+    } else {
+        window.history.back();
+    }
+    proceedToLogout();
+  }
+
+  const handleSaveAndLogout = async () => {
+    await handleSaveCardsToServer();
+    if(isHandlingPopstate.current) {
+        setIsLogoutConfirmOpen(false);
+    } else {
+        window.history.back();
+    }
+    proceedToLogout();
+  }
 
   const handleChangePassword = async (password: string, new_password: string) => {
     try {
@@ -106,7 +166,7 @@ const App: React.FC = () => {
         body: JSON.stringify({ action: 'change_password', password, new_password }),
       }, 'خطا در تغییر رمز عبور');
       addToast('رمز عبور با موفقیت تغییر کرد.', 'success');
-      setIsChangePasswordModalOpen(false);
+      handleCloseChangePasswordModal();
     } catch (error) {
       // Error is already handled by handleApiRequest
     }
@@ -132,6 +192,7 @@ const App: React.FC = () => {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ cards: cardsToSave }),
       }, 'خطا در ذخیره کارت‌ها');
+      setCards(cards.map(c => ({...c, status: 'synced'})))
       addToast('کارت‌ها با موفقیت در سرور ذخیره شدند.', 'success');
     } catch (error) {
        // Error is already handled by handleApiRequest
@@ -145,7 +206,7 @@ const App: React.FC = () => {
         headers: { 'Authorization': `Bearer ${token}` },
       }, 'خطا در بارگیری کارت‌ها');
       
-      const loadedCards = data.cards.map((card: any) => {
+      const serverCards = data.cards.map((card: any): BankCard => {
         const bankInfo = bankData.banks.find(b => b.name_fa === card.bank_name);
         return {
           id: card.id.toString(),
@@ -157,42 +218,62 @@ const App: React.FC = () => {
           expiryDate: card.expire_date || '',
           customColor: card.bankColor,
           bankColor: bankInfo?.color,
+          status: 'synced',
         }
       });
-      setCards(loadedCards);
-      if(!silent) addToast(`تعداد ${loadedCards.length} کارت با موفقیت از سرور بارگیری شد.`, 'success');
+
+      const cardMap = new Map<string, BankCard>();
+      serverCards.forEach(c => cardMap.set(c.cardNumber, c));
+      cards.forEach(c => { // cards from local storage
+          if(c.status === 'local' || c.status === 'edited') {
+              cardMap.set(c.cardNumber, c);
+          }
+      });
+
+      setCards(Array.from(cardMap.values()));
+
+      if(!silent) addToast(`تعداد ${serverCards.length} کارت با موفقیت از سرور بارگیری شد.`, 'success');
     } catch (error) {
        // Error is already handled by handleApiRequest
     }
   };
 
   const handleOpenModal = (card: BankCard | null = null) => {
+    window.history.pushState({ modal: 'cardForm' }, '');
     setCardToEdit(card);
     setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
-    setCardToEdit(null);
-    setIsModalOpen(false);
+    if (isHandlingPopstate.current) {
+        setCardToEdit(null);
+        setIsModalOpen(false);
+    } else if(isModalOpen) {
+        window.history.back();
+    }
   };
 
-  const handleSaveCard = (card: BankCard) => {
+  const handleSaveCard = (card: Omit<BankCard, 'status'> & { id: string; status?: BankCard['status'] }) => {
     const bankInfo = bankData.banks.find(b => b.name_fa === card.bankName);
-    const finalCard = { 
+    const baseCard = { 
         ...card, 
         iban: card.iban.toUpperCase().startsWith('IR') ? card.iban : `IR${card.iban}`,
         bankColor: bankInfo?.color,
     };
     
     if (cardToEdit) {
-      setCards(cards.map((c) => (c.id === finalCard.id ? finalCard : c)));
+      const cardToUpdate = cards.find(c => c.id === baseCard.id);
+      const newStatus = (cardToUpdate && cardToUpdate.status === 'synced') ? 'edited' : cardToUpdate?.status || 'edited';
+      setCards(cards.map((c) => (c.id === baseCard.id ? { ...baseCard, status: newStatus } : c)));
     } else {
-      setCards([...cards, finalCard]);
+      const newCard: BankCard = { ...baseCard, status: 'local' };
+      setCards([...cards, newCard]);
     }
     handleCloseModal();
   };
 
   const handleDeleteCard = (id: string) => {
+    window.history.pushState({ modal: 'confirmDelete' }, '');
     setCardToDeleteId(id);
     setIsConfirmModalOpen(true);
   };
@@ -201,23 +282,51 @@ const App: React.FC = () => {
     if (cardToDeleteId) {
       setCards(cards.filter((card) => card.id !== cardToDeleteId));
     }
-    setCardToDeleteId(null);
-    setIsConfirmModalOpen(false);
+    handleCloseConfirmModal();
   };
   
   const handleCloseConfirmModal = () => {
-    setCardToDeleteId(null);
-    setIsConfirmModalOpen(false);
+    if (isHandlingPopstate.current) {
+      setCardToDeleteId(null);
+      setIsConfirmModalOpen(false);
+    } else if (isConfirmModalOpen) {
+      window.history.back();
+    }
   };
 
   const handleToggleExpand = (id: string) => {
     setExpandedCardId(prevId => (prevId === id ? null : id));
   };
+  
+  const handleOpenChangePasswordModal = () => {
+    window.history.pushState({ modal: 'changePassword' }, '');
+    setIsChangePasswordModalOpen(true);
+  };
+
+  const handleCloseChangePasswordModal = () => {
+    if (isHandlingPopstate.current) {
+      setIsChangePasswordModalOpen(false);
+    } else if (isChangePasswordModalOpen) {
+      window.history.back();
+    }
+  };
+
+  const handleSetMenuOpen = (open: boolean) => {
+    if (open) {
+      window.history.pushState({ menu: 'side' }, '');
+      setIsMenuOpen(true);
+    } else {
+      if (isHandlingPopstate.current) {
+        setIsMenuOpen(false);
+      } else if (isMenuOpen) {
+        window.history.back();
+      }
+    }
+  };
 
   const handleShareCard = async (card: BankCard) => {
     const shareText = `عنوان: ${card.customTitle || card.bankName}\nبانک: ${card.bankName}\nشماره کارت: ${card.cardNumber.replace(/\s/g, '')}\nشماره شبا: ${card.iban}`;
     
-    // Using modern share APIs
     if (navigator.share) {
       try {
         await navigator.share({
@@ -231,7 +340,6 @@ const App: React.FC = () => {
         }
       }
     } else {
-       // Fallback for desktop or unsupported browsers
       try {
         await navigator.clipboard.writeText(shareText);
         addToast('اطلاعات کارت در کلیپ‌بورد کپی شد.', 'success');
@@ -252,7 +360,18 @@ const App: React.FC = () => {
   });
 
   const handleNavigate = (page: 'main' | 'help' | 'support' | 'download') => {
-    setCurrentPage(page);
+    if (isHandlingPopstate.current) {
+        setCurrentPage(page);
+    } else {
+        if (currentPage === 'main' && page !== 'main') {
+            window.history.pushState({ page: page }, '');
+            setCurrentPage(page);
+        } else if (currentPage !== 'main' && page === 'main') {
+            window.history.back();
+        } else {
+            setCurrentPage(page);
+        }
+    }
     setSearchTerm(''); 
   };
 
@@ -339,7 +458,7 @@ const App: React.FC = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center gap-4">
           <div className="flex items-center gap-4">
              <button
-              onClick={() => setIsMenuOpen(true)}
+              onClick={() => handleSetMenuOpen(true)}
               className="p-2 text-white rounded-full hover:bg-white/20 transition-colors"
               aria-label="باز کردن منو"
             >
@@ -380,11 +499,11 @@ const App: React.FC = () => {
       
       <SideMenu
         isOpen={isMenuOpen}
-        onClose={() => setIsMenuOpen(false)}
+        onClose={() => handleSetMenuOpen(false)}
         onNavigate={handleNavigate}
         onSaveToServer={handleSaveCardsToServer}
         onLoadFromServer={() => handleLoadCardsFromServer(false)}
-        onChangePassword={() => setIsChangePasswordModalOpen(true)}
+        onChangePassword={handleOpenChangePasswordModal}
         onLogout={handleLogout}
       />
 
@@ -415,10 +534,41 @@ const App: React.FC = () => {
 
       <ChangePasswordModal 
         isOpen={isChangePasswordModalOpen}
-        onClose={() => setIsChangePasswordModalOpen(false)}
+        onClose={handleCloseChangePasswordModal}
         onSave={handleChangePassword}
         loading={loading}
       />
+
+      {isLogoutConfirmOpen && (
+         <div
+            className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4 transition-opacity duration-300"
+            onClick={handleLogoutAnyway}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="logout-modal-title"
+        >
+            <div
+                className="bg-white rounded-lg shadow-2xl w-full max-w-sm transform animate-fade-in-up"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="p-6 text-center">
+                    <h2 id="logout-modal-title" className="text-lg font-bold text-gray-800">تغییرات ذخیره نشده</h2>
+                    <p className="mt-2 text-gray-600">شما تغییرات ذخیره نشده‌ای دارید. آیا می‌خواهید قبل از خروج آن‌ها را در سرور ذخیره کنید؟</p>
+                </div>
+                <div className="px-6 py-4 bg-gray-50 grid grid-cols-1 sm:grid-cols-3 gap-3 rounded-b-lg">
+                    <button onClick={handleLogoutAnyway} className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                        خروج بدون ذخیره
+                    </button>
+                    <button onClick={() => setIsLogoutConfirmOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        انصراف
+                    </button>
+                    <button onClick={handleSaveAndLogout} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        ذخیره و خروج
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   );
 };
