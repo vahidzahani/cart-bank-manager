@@ -12,6 +12,7 @@ import AuthForm from './components/AuthForm';
 import ChangePasswordModal from './components/ChangePasswordModal';
 import { PlusIcon, SearchIcon, MenuIcon } from './components/icons';
 import { bankData } from './data/banks';
+import { useToast } from './hooks/useToast';
 
 const AUTH_API_URL = 'https://card.cloudecode.ir/auth.php';
 const DATA_API_URL = 'https://card.cloudecode.ir/data.php';
@@ -34,6 +35,8 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   
+  const { addToast } = useToast();
+  
   // Auto-load cards when user logs in (token is set)
   useEffect(() => {
     if (token) {
@@ -52,7 +55,7 @@ const App: React.FC = () => {
       }
       return data;
     } catch (error) {
-      alert((error as Error).message);
+      addToast((error as Error).message, 'error');
       throw error;
     } finally {
       setLoading(false);
@@ -67,7 +70,7 @@ const App: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password, action: 'register', device: navigator.userAgent }),
       }, 'خطا در ثبت‌نام');
-      alert('ثبت‌نام با موفقیت انجام شد. اکنون می‌توانید وارد شوید.');
+      addToast('ثبت‌نام با موفقیت انجام شد. اکنون می‌توانید وارد شوید.', 'success');
       return true; // Indicate success
     } catch (error) {
       setAuthError((error as Error).message);
@@ -102,16 +105,16 @@ const App: React.FC = () => {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ action: 'change_password', password, new_password }),
       }, 'خطا در تغییر رمز عبور');
-      alert('رمز عبور با موفقیت تغییر کرد.');
+      addToast('رمز عبور با موفقیت تغییر کرد.', 'success');
       setIsChangePasswordModalOpen(false);
     } catch (error) {
-      // Error is already alerted by handleApiRequest
+      // Error is already handled by handleApiRequest
     }
   };
 
   const handleSaveCardsToServer = async () => {
     if(cards.length === 0) {
-        alert('هیچ کارتی برای ذخیره وجود ندارد.');
+        addToast('هیچ کارتی برای ذخیره وجود ندارد.', 'info');
         return;
     }
     try {
@@ -129,9 +132,9 @@ const App: React.FC = () => {
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ cards: cardsToSave }),
       }, 'خطا در ذخیره کارت‌ها');
-      alert('کارت‌ها با موفقیت در سرور ذخیره شدند.');
+      addToast('کارت‌ها با موفقیت در سرور ذخیره شدند.', 'success');
     } catch (error) {
-       // Error is already alerted by handleApiRequest
+       // Error is already handled by handleApiRequest
     }
   };
   
@@ -157,9 +160,9 @@ const App: React.FC = () => {
         }
       });
       setCards(loadedCards);
-      if(!silent) alert(`تعداد ${loadedCards.length} کارت با موفقیت از سرور بارگیری شد.`);
+      if(!silent) addToast(`تعداد ${loadedCards.length} کارت با موفقیت از سرور بارگیری شد.`, 'success');
     } catch (error) {
-       // Error is already alerted by handleApiRequest
+       // Error is already handled by handleApiRequest
     }
   };
 
@@ -224,16 +227,16 @@ const App: React.FC = () => {
       } catch (error) {
         if ((error as Error).name !== 'AbortError') {
            console.error('Web Share API failed:', error);
-           alert('خطایی در هنگام اشتراک‌گذاری رخ داد.');
+           addToast('خطایی در هنگام اشتراک‌گذاری رخ داد.', 'error');
         }
       }
     } else {
        // Fallback for desktop or unsupported browsers
       try {
         await navigator.clipboard.writeText(shareText);
-        alert('اطلاعات کارت در کلیپ‌بورد کپی شد.');
+        addToast('اطلاعات کارت در کلیپ‌بورد کپی شد.', 'success');
       } catch (err) {
-        alert('اشتراک‌گذاری در این مرورگر پشتیبانی نمی‌شود.');
+        addToast('اشتراک‌گذاری در این مرورگر پشتیبانی نمی‌شود.', 'error');
       }
     }
   };

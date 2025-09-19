@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import type { BankCard } from '../types';
 import { CloseIcon } from './icons';
 import { bankData } from '../data/banks';
+import { useToast } from '../hooks/useToast';
 
 interface CardFormModalProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ const CardFormModal: React.FC<CardFormModalProps> = ({ isOpen, onClose, onSave, 
   const [isBankSelectorOpen, setIsBankSelectorOpen] = useState(false);
   const [bankSearchTerm, setBankSearchTerm] = useState('');
   const bankSelectorRef = useRef<HTMLDivElement>(null);
+  const { addToast } = useToast();
 
   useEffect(() => {
     if (isOpen) {
@@ -84,7 +86,7 @@ const CardFormModal: React.FC<CardFormModalProps> = ({ isOpen, onClose, onSave, 
     const requiredFields: (keyof Omit<BankCard, 'id' | 'customTitle' | 'customColor' | 'bankColor' | 'bankNameEn'>)[] = ['bankName', 'cardNumber', 'iban', 'cvv', 'expiryDate'];
     for(const field of requiredFields) {
         if(!card[field]) {
-            alert('لطفا همه فیلدهای ستاره‌دار را پر کنید.');
+            addToast('لطفا همه فیلدهای ستاره‌دار را پر کنید.', 'error');
             return;
         }
     }
